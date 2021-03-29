@@ -591,7 +591,7 @@ export default {
     },
     
     queryPresaleData: async function() {
-      const response = await axios.get(`${process.env.VUE_APP_SERVICE_PHP}/presale/${this.id}`);
+      const response = await axios.get(`${process.env.VUE_APP_SERVICE}/presale/${this.id}`);
       if (response.status !== 200)
         return this.showError(response);
 
