@@ -206,7 +206,6 @@ export default {
       await tokenInterface.methods.balanceOf(this.account)
         .call()
         .then((response) => {
-          console.log(response)
           this.yieldPoolAmount = web3.utils.fromWei(response);
         });
     },
