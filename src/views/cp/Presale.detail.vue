@@ -625,7 +625,6 @@ export default {
       const web3 = new Web3(this.provider);
       const tokenContractInterface = new web3.eth.Contract(tokenContractAbi);
 
-      
       tokenContractInterface.options.address = this.presale.TokenAddress;
       await tokenContractInterface.methods.allowance(this.account, process.env.VUE_APP_PRESALE_CONTRACT_ETH).call().then((response) => {
         console.log(response);
