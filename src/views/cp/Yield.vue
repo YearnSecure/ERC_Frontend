@@ -131,18 +131,18 @@ export default {
       await this.detectProvider();
       // Connect to your account
       await this.currentAccount();
-      // Read contract data
-      await this.getContractData();
     }
 
-    await this.getContractData();
-    await this.tokenAllowance();
-    await this.getYieldAmount();
-
+    await this.initYieldFarm();
     this.$loading(false);
   },
   methods: {
-    detectProvider: async function () {
+    initYieldFarm: async function() {
+      await this.getContractData();
+      await this.tokenAllowance();
+      await this.getYieldAmount();
+    },
+    detectProvider: async function() {
       if (!this.provider.isMetaMask)
         return this.showError(
           'MetaMask is not installed.', 
@@ -253,13 +253,14 @@ export default {
           .send({from: this.account})
           .then((response) => {
             if (response.status) {
+              this.$loading(false);
               this.$notifications(
                   'Staked successfully',
                   ``,
                   0, // success
                   true);
 
-              this.$loading(false);
+              this.initYieldFarm();
             }
           })
           .catch((e) => {
@@ -283,21 +284,22 @@ export default {
           .send({from: this.account})
           .then((response) => {
             if (response.status) {
-              this.$notifications(
-                  'Unstaked successfully',
-                  ``,
-                  0, // success
-                  true);
-
               this.$loading(false);
+              this.$notifications(
+                'Unstaked successfully',
+                ``,
+                0, // success
+                true);
+
+              this.initYieldFarm();
             }
           })
           .catch((e) => {
             this.$notifications(
-                'Something went wrong unstaking',
-                e,
-                1, // error
-                true);
+              'Something went wrong unstaking',
+              e,
+              1, // error
+              true);
 
             this.$loading(false);
           });
@@ -313,21 +315,22 @@ export default {
           .send({from: this.account})
           .then((response) => {
             if (response.status) {
-              this.$notifications(
-                  'Reward claimed successfully',
-                  ``,
-                  0, // success
-                  true);
-
               this.$loading(false);
+              this.$notifications(
+                'Reward claimed successfully',
+                ``,
+                0, // success
+                true);
+
+              this.initYieldFarm();
             }
           })
           .catch((e) => {
             this.$notifications(
-                'Something went wrong claiming rewards',
-                e,
-                1, // error
-                true);
+              'Something went wrong claiming rewards',
+              e,
+              1, // error
+              true);
 
             this.$loading(false);
           });

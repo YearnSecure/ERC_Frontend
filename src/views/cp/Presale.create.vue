@@ -441,12 +441,11 @@ export default {
         .send({from: this.account})
         .then((response) => {
           if (response.status && response.blockHash !== '') {
-            console.log(response);
             this.key++; // update components
 
             this.$notifications(
                 'Presale successfully created',
-                `https://ropsten.etherscan.io/tx/${response.transactionHash}`,
+                `https://www.etherscan.io/tx/${response.transactionHash}`,
                 0, // success
                 true);
 
