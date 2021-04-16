@@ -505,8 +505,8 @@ export default {
       await presaleContractInterface.methods.Presales(this.id).call().then((response) => {
         //Presale Info
         this.presale.Name = response.Info.Name;
-        this.presale.StartDate = moment.unix((parseInt(response.StartDate)));
-        this.presale.EndDate = moment.unix((parseInt(response.EndDate)));
+        this.presale.StartDate = (parseInt(response.StartDate));
+        this.presale.EndDate = (parseInt(response.EndDate));
         this.presale.Softcap = this.readableFormatNumbers(web3.utils.fromWei(response.Softcap));
         this.presale.Hardcap = this.readableFormatNumbers(web3.utils.fromWei(response.Hardcap));
         this.presale.TokenAddress = response.Addresses.TokenAddress;
@@ -652,7 +652,9 @@ export default {
         await tokenContractInterface.methods
             .approve(process.env.VUE_APP_PRESALE_CONTRACT_ETH, this.presale.TotalTokenAmount)
             .send({from: this.account})
-            .then()
+            .then(() => {
+              this.initDetailPage();
+            })
             .catch((e) => {
               console.log('error:' + e);
             });
@@ -665,7 +667,9 @@ export default {
       presaleContractInterface.options.address = process.env.VUE_APP_PRESALE_CONTRACT_ETH;
         await presaleContractInterface.methods.TransferTokens(this.id)
           .send({from: this.account})
-          .then()
+          .then(() => {
+            this.initDetailPage();
+          })
           .catch((e) => {
             console.log('error:' + e);
           });
