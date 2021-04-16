@@ -392,7 +392,7 @@ export default {
         TokenLiquidity: null,
         TokenPrice: null,
         TotalContributed: null,
-        TokenOwnerAddress: 0,
+        TokenOwnerAddress: "",
         EthDistributable: null,
         TokenTimeLock: null,
         CurrentStep: 0,
