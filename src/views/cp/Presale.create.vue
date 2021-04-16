@@ -165,16 +165,14 @@ export default {
       liquidity: {
         amount: null,
         percentage: null,
-        locked: false,
-        permaBurn: false,
-        timeLocked: false,
+        lockedOrPermaBurn: null,
+        timeLockedOrInterval: null,
         releaseDate: null,
         releaseDateTime: {
           HH: null,
           mm: "00",
           ss: "00"
         },
-        interval: false,
         intervalStartDate: null,
         intervalStartDateTime: {
           HH: null,
@@ -350,8 +348,9 @@ export default {
       let releaseDate = 0;
       let intervalPercentage = 0;
       let intervalOfRelease = 0;
-      if (!this.liquidity.permaBurn) {
-        if (this.liquidity.locked && this.liquidity.timeLocked) {
+
+      if (this.liquidity.lockedOrPermaBurn === '0') {
+        if (this.liquidity.timeLockedOrInterval === '0') {
           // add time to datetime settings
           const startTime = this.liquidity.releaseDateTime;
           const startDate = new Date(this.liquidity.releaseDate);
@@ -359,7 +358,7 @@ export default {
           startDate.setMinutes(startTime.mm);
 
           releaseDate = (new Date(startDate).getTime()/1000);
-        } else if (this.liquidity.interval) {
+        } else if (this.liquidity.timeLockedOrInterval === '1') {
           // add time to datetime settings
           const startTime = this.liquidity.intervalStartDateTime;
           const startDate = new Date(this.liquidity.intervalStartDate);
@@ -372,12 +371,16 @@ export default {
         }
       }
 
+      let interval = false;
+      if (this.liquidity.timeLockedOrInterval === '1')
+        interval = true;
+
       return {
         Name: `${this.settings.name}-liquidity-tokens`,
         Amount: 0, // not relevant
         RemainingAmount: 0, // not relevant
         ReleaseDate: releaseDate,
-        IsInterval: this.liquidity.interval,
+        IsInterval: interval,
         PercentageOfRelease: intervalPercentage,
         IntervalOfRelease: intervalOfRelease,
         Exists: true,
@@ -441,12 +444,11 @@ export default {
         .send({from: this.account})
         .then((response) => {
           if (response.status && response.blockHash !== '') {
-            console.log(response);
             this.key++; // update components
 
             this.$notifications(
                 'Presale successfully created',
-                `https://ropsten.etherscan.io/tx/${response.transactionHash}`,
+                `https://www.etherscan.io/tx/${response.transactionHash}`,
                 0, // success
                 true);
 
@@ -572,15 +574,15 @@ export default {
           this.remainingAmount = (this.settings.totalTokens - this.settings.tokenPresaleAllocation - this.liquidity.amount);
         }
 
-        if (this.liquidity.percentage !== null && this.liquidity.amount !== null) {
-          if (this.liquidity.permaBurn) {
+        if (this.liquidity.lockedOrPermaBurn !== null && this.liquidity.amount !== null) {
+          if (this.liquidity.lockedOrPermaBurn === '1') {
             // all values are filled so liquidity is valid
             this.liquidityIsValid = true;
-          } else if (this.liquidity.locked && this.liquidity.timeLocked) {
+          } else if (this.liquidity.lockedOrPermaBurn === '0' && this.liquidity.timeLockedOrInterval === '0') {
             // when timelocked is selected check releasedate
             if (this.liquidity.releaseDate !== null && this.liquidity.releaseDateTime.HH !== null)
               this.liquidityIsValid = true;
-          } else if (this.liquidity.locked && this.liquidity.interval) {
+          } else if (this.liquidity.lockedOrPermaBurn === '0' && this.liquidity.timeLockedOrInterval === '1') {
             // When interval is selected check interval values
             if (this.liquidity.intervalStartDate !== null &&
                 this.liquidity.intervalStartDateTime.HH !== null &&

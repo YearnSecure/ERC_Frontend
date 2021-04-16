@@ -1,5 +1,5 @@
 <template>
-  <div id="presale" class="h-screen">
+  <div id="presale" :class="!isLoaded ? 'h-screen' : ''">
     <transition name="slide-fade">
       <main v-if="isLoaded" class="flex-1 relative z-0 overflow-y-auto focus:outline-none" tabindex="0">
         <Header
@@ -30,10 +30,10 @@
                   {{ presale.TokenName }}
                 </span>
                 <span class="block text-base text-gray-900 dark:text-white font-medium tracking-wide">
-                  Start date: {{ formatDate(presale.StartDate) }}
+                  Start date: {{ formatEpochDate(presale.StartDate) }}
                 </span>
                 <span class="block text-base text-gray-900 dark:text-white font-medium tracking-wide">
-                  End date: {{ formatDate(presale.EndDate) }}
+                  End date: {{ formatEpochDate(presale.EndDate) }}
                 </span>
               </h1>
             </div>
@@ -470,27 +470,31 @@ export default {
       await this.currentAccount();
     }
 
-    this.web3 = new Web3(this.provider);
-    await this.getPresaleData();
-    await this.getContributedEth();
-    await this.getSoftcapMet();
-    if (this.account.toLowerCase() === this.presale.TokenOwnerAddress.toLowerCase()){
-      await this.getAllowance();
-    }
-    if (parseInt(this.presale.CurrentStep) === 1){
-      await this.getPresaleFinished();
-      if (!this.presale.finished){
-        await this.getPresaleStarted();
-      }
-    }
+    await this.initDetailPage();
 
-    await this.getTokenAllocations();
-
-    this.setProgressBar();
     this.$loading(false);
     this.isLoaded = true;
   },
   methods: {
+    initDetailPage: async function() {
+      this.web3 = new Web3(this.provider);
+      await this.getPresaleData();
+      await this.getContributedEth();
+      await this.getSoftcapMet();
+      if (this.account.toLowerCase() === this.presale.TokenOwnerAddress.toLowerCase()){
+        await this.getAllowance();
+      }
+      if (parseInt(this.presale.CurrentStep) === 1){
+        await this.getPresaleFinished();
+        if (!this.presale.finished){
+          await this.getPresaleStarted();
+        }
+      }
+
+      await this.getTokenAllocations();
+
+      this.setProgressBar();
+    },
     getPresaleData: async function() {
       const presaleContractAbi = this.contractAbi;
       const web3 = new Web3(this.provider);
@@ -498,47 +502,46 @@ export default {
       
       presaleContractInterface.options.address = process.env.VUE_APP_PRESALE_CONTRACT_ETH;
 
+      await presaleContractInterface.methods.Presales(this.id).call().then((response) => {
+        //Presale Info
+        this.presale.Name = response.Info.Name;
+        this.presale.StartDate = (parseInt(response.StartDate));
+        this.presale.EndDate = (parseInt(response.EndDate));
+        this.presale.Softcap = this.readableFormatNumbers(web3.utils.fromWei(response.Softcap));
+        this.presale.Hardcap = this.readableFormatNumbers(web3.utils.fromWei(response.Hardcap));
+        this.presale.TokenAddress = response.Addresses.TokenAddress;
+        this.presale.LiquidityLocked = response.LiqPercentage;
+        this.totalSupply = web3.utils.fromWei(response.State.TotalTokenAmount);
+        this.presale.TotalSupply = this.readableFormatNumbers(web3.utils.fromWei(response.State.TotalTokenAmount));
+        this.presale.TotalTokenAmount = response.State.TotalTokenAmount;
+        this.presale.TokensInPresale = this.readableFormatNumbers(web3.utils.fromWei(response.TokenPresaleAllocation));
+        this.tokensInPresale = web3.utils.fromWei(response.TokenPresaleAllocation);
+        this.presale.RawTokensInPresale = web3.utils.fromWei(response.TokenPresaleAllocation);
+        this.presale.TokenLiquidity = this.readableFormatNumbers(web3.utils.fromWei(response.TokenLiqAmount));
+        this.liquidityTokens = web3.utils.fromWei(response.TokenLiqAmount);
+        this.presale.TokenPrice = this.getTokenPrice();
+        this.presale.TotalContributed = web3.utils.fromWei(response.State.ContributedEth);
+        this.presale.TokenOwnerAddress = response.Addresses.TokenOwnerAddress;
+        this.presale.EthDistributable = (response.State.ContributedEth - response.State.RetrievedEthAmount) > 0;
+        this.presale.TokenTimeLock = response.Addresses.TokenTimeLock;
 
-        await presaleContractInterface.methods.Presales(this.id).call().then((response) => {
-          //Presale Info
-          this.presale.Name = response.Info.Name;
-          this.presale.StartDate = moment.unix((parseInt(response.StartDate)));
-          this.presale.EndDate = moment.unix((parseInt(response.EndDate)));
-          this.presale.Softcap = this.readableFormatNumbers(web3.utils.fromWei(response.Softcap));
-          this.presale.Hardcap = this.readableFormatNumbers(web3.utils.fromWei(response.Hardcap));
-          this.presale.TokenAddress = response.Addresses.TokenAddress;
-          this.presale.LiquidityLocked = response.LiqPercentage;
-          this.totalSupply = web3.utils.fromWei(response.State.TotalTokenAmount);
-          this.presale.TotalSupply = this.readableFormatNumbers(web3.utils.fromWei(response.State.TotalTokenAmount));
-          this.presale.TotalTokenAmount = response.State.TotalTokenAmount;
-          this.presale.TokensInPresale = this.readableFormatNumbers(web3.utils.fromWei(response.TokenPresaleAllocation));
-          this.tokensInPresale = web3.utils.fromWei(response.TokenPresaleAllocation);
-          this.presale.RawTokensInPresale = web3.utils.fromWei(response.TokenPresaleAllocation);
-          this.presale.TokenLiquidity = this.readableFormatNumbers(web3.utils.fromWei(response.TokenLiqAmount));
-          this.liquidityTokens = web3.utils.fromWei(response.TokenLiqAmount);
-          this.presale.TokenPrice = this.getTokenPrice();
-          this.presale.TotalContributed = web3.utils.fromWei(response.State.ContributedEth);
-          this.presale.TokenOwnerAddress = response.Addresses.TokenOwnerAddress;
-          this.presale.EthDistributable = (response.State.ContributedEth - response.State.RetrievedEthAmount) > 0;
-          this.presale.TokenTimeLock = response.Addresses.TokenTimeLock;
+        const presalePrice = web3.utils.fromWei(response.TokenPresaleAllocation)/web3.utils.fromWei(response.Hardcap);
+        const listingPrice = web3.utils.fromWei(response.TokenLiqAmount) / ((response.LiqPercentage/100)*Number(web3.utils.fromWei(response.Hardcap)*0.95));
+        this.presale.listingPrice =  (presalePrice/listingPrice).toFixed(2);
 
-          const presalePrice = web3.utils.fromWei(response.TokenPresaleAllocation)/web3.utils.fromWei(response.Hardcap);
-          const listingPrice = web3.utils.fromWei(response.TokenLiqAmount) / ((response.LiqPercentage/100)*Number(web3.utils.fromWei(response.Hardcap)*0.95)); 
-          this.presale.listingPrice =  (presalePrice/listingPrice).toFixed(2);
-
-          //Current Presale Step
-          this.presale.CurrentStep = response.State.Step;
-          //Socials
-          this.presale.Github = response.Info.Github;
-          this.presale.Medium = response.Info.Medium;
-          this.presale.Telegram = response.Info.Telegram;
-          this.presale.Twitter = response.Info.Twitter;
-          this.presale.Website = response.Info.Website;
-          this.getTokenTicker();
-        })
-        .catch((e) => {
-          console.log('error:' + e);
-        });
+        //Current Presale Step
+        this.presale.CurrentStep = response.State.Step;
+        //Socials
+        this.presale.Github = response.Info.Github;
+        this.presale.Medium = response.Info.Medium;
+        this.presale.Telegram = response.Info.Telegram;
+        this.presale.Twitter = response.Info.Twitter;
+        this.presale.Website = response.Info.Website;
+        this.getTokenTicker();
+      })
+      .catch((e) => {
+        console.log('error:' + e);
+      });
     },
     getTokenAllocations: async function() {
       const presaleContractAbi = this.contractAbi;
@@ -578,20 +581,20 @@ export default {
       const presaleContractInterface = new web3.eth.Contract(presaleContractAbi);
       
       presaleContractInterface.options.address = process.env.VUE_APP_PRESALE_CONTRACT_ETH;
-        await presaleContractInterface.methods.GetEthContributedForAddress(this.id, this.account).call().then((response) => {
-          console.log(parseInt(response))
-          if (parseInt(response) === 0){
-            this.presale.UserContribution = 0;
-            this.presale.Roi = 0;
-          } else {
-            this.presale.UserContribution = web3.utils.fromWei(response);
-            this.getRoi();
-          }          
-            })
-            .catch((e) => {
-              console.log('error:' + e);
-            });
-    
+        await presaleContractInterface.methods.GetEthContributedForAddress(this.id, this.account)
+          .call()
+          .then((response) => {
+            if (parseInt(response) === 0){
+              this.presale.UserContribution = 0;
+              this.presale.Roi = 0;
+            } else {
+              this.presale.UserContribution = web3.utils.fromWei(response);
+              this.getRoi();
+            }
+          })
+          .catch((e) => {
+            console.log('error:' + e);
+          });
     },
     getTokenTicker: async function() {
       const tokenContractAbi = this.tokenAbi;
@@ -599,12 +602,14 @@ export default {
       const tokenContractInterface = new web3.eth.Contract(tokenContractAbi);
       
       tokenContractInterface.options.address = this.presale.TokenAddress;
-        await tokenContractInterface.methods.symbol().call().then((response) => {
-          this.presale.TokenName = response;          
-        })
-        .catch((e) => {
-          console.log(e.request);
-        });
+        await tokenContractInterface.methods.symbol()
+          .call()
+          .then((response) => {
+            this.presale.TokenName = response;
+          })
+          .catch((e) => {
+            console.log(e.request);
+          });
     },
     getRoi: async function() {
       const presaleContractAbi = this.contractAbi;
@@ -615,7 +620,6 @@ export default {
         await presaleContractInterface.methods.GetAmountOfTokensForAddress(this.id, this.account)
           .call()
           .then((response) => {
-            console.log(response)
             this.presale.Roi = web3.utils.fromWei(response);
           })
           .catch((e) => {
@@ -631,11 +635,13 @@ export default {
       const tokenContractInterface = new web3.eth.Contract(tokenContractAbi);
 
       tokenContractInterface.options.address = this.presale.TokenAddress;
-      await tokenContractInterface.methods.allowance(this.account, process.env.VUE_APP_PRESALE_CONTRACT_ETH).call().then((response) => {
-        this.allowanceState = response;
-      }).catch((e) => {
-        console.log('error:' + e);
-      });
+      await tokenContractInterface.methods.allowance(this.account, process.env.VUE_APP_PRESALE_CONTRACT_ETH)
+        .call()
+        .then((response) => {
+          this.allowanceState = response;
+        }).catch((e) => {
+          console.log('error:' + e);
+        });
     },
     approveCall: async function (){
       const tokenContractAbi = this.tokenAbi;
@@ -646,7 +652,9 @@ export default {
         await tokenContractInterface.methods
             .approve(process.env.VUE_APP_PRESALE_CONTRACT_ETH, this.presale.TotalTokenAmount)
             .send({from: this.account})
-            .then()
+            .then(() => {
+              this.initDetailPage();
+            })
             .catch((e) => {
               console.log('error:' + e);
             });
@@ -657,10 +665,14 @@ export default {
       const presaleContractInterface = new web3.eth.Contract(presaleContractAbi);
       
       presaleContractInterface.options.address = process.env.VUE_APP_PRESALE_CONTRACT_ETH;
-        await presaleContractInterface.methods.TransferTokens(this.id).send({from: this.account}).then()
-            .catch((e) => {
-              console.log('error:' + e);
-            });
+        await presaleContractInterface.methods.TransferTokens(this.id)
+          .send({from: this.account})
+          .then(() => {
+            this.initDetailPage();
+          })
+          .catch((e) => {
+            console.log('error:' + e);
+          });
     },
     getPresaleFinished: async function() {
       const presaleContractAbi = this.contractAbi;
@@ -668,12 +680,13 @@ export default {
       const presaleContractInterface = new web3.eth.Contract(presaleContractAbi);
       
       presaleContractInterface.options.address = process.env.VUE_APP_PRESALE_CONTRACT_ETH;
-        await presaleContractInterface.methods.PresaleFinished(this.id).call({from: this.account}).then((response) => {
-          this.presale.finished = response
-        }).catch((e) => {
-              console.log('error:' + e);
-            });
-
+        await presaleContractInterface.methods.PresaleFinished(this.id)
+          .call({from: this.account})
+          .then((response) => {
+            this.presale.finished = response
+          }).catch((e) => {
+            console.log('error:' + e);
+          });
     },
     getPresaleStarted: async function() {
       const presaleContractAbi = this.contractAbi;
@@ -681,11 +694,13 @@ export default {
       const presaleContractInterface = new web3.eth.Contract(presaleContractAbi);
       
       presaleContractInterface.options.address = process.env.VUE_APP_PRESALE_CONTRACT_ETH;
-        await presaleContractInterface.methods.PresaleStarted(this.id).call({from: this.account}).then((response) => {
-          this.presale.started = response
-        }).catch((e) => {
-              console.log('error:' + e);
-            });
+        await presaleContractInterface.methods.PresaleStarted(this.id)
+          .call({from: this.account})
+          .then((response) => {
+            this.presale.started = response
+          }).catch((e) => {
+            console.log('error:' + e);
+          });
     },
     addUniswapLiquidity: async function () {
       const presaleContractAbi = this.contractAbi;
@@ -693,10 +708,14 @@ export default {
       const presaleContractInterface = new web3.eth.Contract(presaleContractAbi);
       
       presaleContractInterface.options.address = process.env.VUE_APP_PRESALE_CONTRACT_ETH;
-        await presaleContractInterface.methods.AddUniswapLiquidity(this.id).send({from: this.account}).then().catch((e) => {
-              console.log('error:' + e);
-            });
-
+        await presaleContractInterface.methods.AddUniswapLiquidity(this.id)
+          .send({from: this.account})
+          .then(() => {
+            this.initDetailPage();
+          })
+          .catch((e) => {
+            console.log('error:' + e);
+          });
     },
     claimTokens: async function() {
       const presaleContractAbi = this.contractAbi;
@@ -704,9 +723,14 @@ export default {
       const presaleContractInterface = new web3.eth.Contract(presaleContractAbi);
       
       presaleContractInterface.options.address = process.env.VUE_APP_PRESALE_CONTRACT_ETH;
-        await presaleContractInterface.methods.ClaimTokens(this.id).send({from: this.account}).then().catch((e) => {
-              console.log('error:' + e);
-            });
+        await presaleContractInterface.methods.ClaimTokens(this.id)
+          .send({from: this.account})
+          .then(() => {
+            this.initDetailPage();
+          })
+          .catch((e) => {
+            console.log('error:' + e);
+          });
     },
     distributeEth: async function() {
       const presaleContractAbi = this.contractAbi;
@@ -714,9 +738,14 @@ export default {
       const presaleContractInterface = new web3.eth.Contract(presaleContractAbi);
       
       presaleContractInterface.options.address = process.env.VUE_APP_PRESALE_CONTRACT_ETH;
-        await presaleContractInterface.methods.DistributeEth(this.id).send({from: this.account}).then().catch((e) => {
-              console.log('error:' + e);
-            });
+        await presaleContractInterface.methods.DistributeEth(this.id)
+          .send({from: this.account})
+          .then(() => {
+            this.initDetailPage();
+          })
+          .catch((e) => {
+            console.log('error:' + e);
+          });
     },
     retrieveEth: async function() {
       const presaleContractAbi = this.contractAbi;
@@ -724,9 +753,14 @@ export default {
       const presaleContractInterface = new web3.eth.Contract(presaleContractAbi);
       
       presaleContractInterface.options.address = process.env.VUE_APP_PRESALE_CONTRACT_ETH;
-        await presaleContractInterface.methods.RetrieveEth(this.id, this.account).send({from: this.account}).then().catch((e) => {
-              console.log('error:' + e);
-            });
+        await presaleContractInterface.methods.RetrieveEth(this.id, this.account)
+          .send({from: this.account})
+          .then(() => {
+            this.initDetailPage();
+          })
+          .catch((e) => {
+            console.log('error:' + e);
+          });
     },
     retrieveTokensOwner: async function() {
       const presaleContractAbi = this.contractAbi;
@@ -734,9 +768,14 @@ export default {
       const presaleContractInterface = new web3.eth.Contract(presaleContractAbi);
       
       presaleContractInterface.options.address = process.env.VUE_APP_PRESALE_CONTRACT_ETH;
-        await presaleContractInterface.methods.RetrieveTokens(this.id).send({from: this.account}).then().catch((e) => {
-              console.log('error:' + e);
-            });
+        await presaleContractInterface.methods.RetrieveTokens(this.id)
+          .send({from: this.account})
+          .then(() => {
+            this.initDetailPage();
+          })
+          .catch((e) => {
+            console.log('error:' + e);
+          });
     },
     TransferTokensToLocks: async function() {
       const presaleContractAbi = this.contractAbi;
@@ -744,9 +783,14 @@ export default {
       const presaleContractInterface = new web3.eth.Contract(presaleContractAbi);
       
       presaleContractInterface.options.address = process.env.VUE_APP_PRESALE_CONTRACT_ETH;
-        await presaleContractInterface.methods.TransferTokensToLocks(this.id).send({from: this.account}).then().catch((e) => {
-              console.log('error:' + e);
-            });
+        await presaleContractInterface.methods.TransferTokensToLocks(this.id)
+          .send({from: this.account})
+          .then(() => {
+            this.initDetailPage();
+          })
+          .catch((e) => {
+            console.log('error:' + e);
+          });
     },
     getSoftcapMet: async function() {
       const presaleContractAbi = this.contractAbi;
@@ -754,11 +798,13 @@ export default {
       const presaleContractInterface = new web3.eth.Contract(presaleContractAbi);
       
       presaleContractInterface.options.address = process.env.VUE_APP_PRESALE_CONTRACT_ETH;
-        await presaleContractInterface.methods.SoftcapMet(this.id).call({from: this.account}).then((response) => {
-          this.presale.SoftcapMet = response
-        }).catch((e) => {
-              console.log('error:' + e);
-            });
+        await presaleContractInterface.methods.SoftcapMet(this.id)
+          .call({from: this.account})
+          .then((response) => {
+            this.presale.SoftcapMet = response
+          }).catch((e) => {
+            console.log('error:' + e);
+          });
     },
     contributeTokens: async function(x) {
       const presaleContractAbi = this.contractAbi;
@@ -766,10 +812,15 @@ export default {
       const presaleContractInterface = new web3.eth.Contract(presaleContractAbi);
       
       presaleContractInterface.options.address = process.env.VUE_APP_PRESALE_CONTRACT_ETH;
-        await presaleContractInterface.methods.Contribute(this.id).send({from: this.account, value:web3.utils.toWei(x.toString())}).then()
-            .catch((e) => {
-              console.log('error:' + e);
-            });
+        await presaleContractInterface.methods.Contribute(this.id)
+          .send({from: this.account, value:web3.utils.toWei(x.toString())})
+          .then(() => {
+            this.contribution = "";
+            this.initDetailPage();
+          })
+          .catch((e) => {
+            console.log('error:' + e);
+          });
     },
     readableFormatNumbers: function(x){
         const parts = x.toString().split(".");

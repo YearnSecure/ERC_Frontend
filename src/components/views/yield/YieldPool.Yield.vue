@@ -79,19 +79,25 @@
     <div class="block px-4 mt-6 sm:px-6 lg:px-8" v-if="!showApproveButton">
       <div class="block">
         <p class="text-gray-700 dark:text-white">Your balance: {{yieldPoolAmount}} YSEC</p>
-        <input
-            type="text"
-            v-model="amount"
-            min="0"
-            placeholder="Amount"
-            class="w-10/12 flex mt-2 mb-2 px-3 py-1 rounded-lg
+        <div class="grid grid-cols-4">
+          <div class="grid col-span-3">
+            <input
+              type="text"
+              v-model="amount"
+              min="0"
+              placeholder="Amount"
+              class="block mt-2 mb-2 px-3 py-1 rounded-lg
               text-gray-600 dark:text-gray-300
               border border-transparent
               focus:outline-none focus:ring-2 focus:ring-yellow-600 focus:border-transparent
               bg-gray-100 dark:bg-gray-700">
-        <button v-if="isVisible" v-on:click="stake" class="flex py-2 px-4 m-auto rounded bg-yellow-500 hover:bg-yellow-600">
-          <span class="flex text-white">Stake</span>
-        </button>
+          </div>
+          <div class="grid col-span-1">
+            <button v-if="isVisible" v-on:click="stake" class="py-2 px-4 m-auto w-10/12 rounded bg-yellow-500 hover:bg-yellow-600">
+              <span class="text-center text-white">Stake</span>
+            </button>
+          </div>
+        </div>
       </div>
       <div class="block mt-10">
         <div class="w-1/2">
@@ -158,6 +164,7 @@ export default {
   methods: {
     stake: function() {
       this.$emit('stake', this.amount);
+      this.amount = "";
     },
     unStake: function() {
       this.$emit('unStake');
