@@ -93,11 +93,11 @@
               <div class="block mt-8">
                 <div class="grid">
                   <div>
-                    <span class="block text-1xl leading-8 font-medium tracking-tight text-gray-900 dark:text-white sm:text-1xl">Coin information</span>
+                    <span class="block text-1xl leading-8 font-medium tracking-tight text-gray-900 dark:text-white sm:text-1xl">Token information</span>
                     <div class="grid gap-1 mt-3">
                       <div class="flex">
-                        <span class="text-gray-900 dark:text-white pr-5">Liquiditiy locked:</span>
-                        <a href="#" class="text-blue-500">{{ presale.LiquidityLocked }}%</a>
+                        <span class="text-gray-900 dark:text-white pr-5">Liquidity locked:</span>
+                        <a href="#" class="text-blue-500">{{ presale.LiquidityLocked }}% of raised ETH</a>
                       </div>
                     </div>
                     <div class="grid gap-1 mt-1">
