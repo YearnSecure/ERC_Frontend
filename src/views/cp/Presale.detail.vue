@@ -97,7 +97,7 @@
                     <div class="grid gap-1 mt-3">
                       <div class="flex">
                         <span class="text-gray-900 dark:text-white pr-5">Liquidity locked:</span>
-                        <a href="#" class="text-blue-500">{{ presale.LiquidityLocked }}%</a>
+                        <a href="#" class="text-blue-500">{{ presale.LiquidityLocked }}% of raised ETH</a>
                       </div>
                     </div>
                     <div class="grid gap-1 mt-1">
