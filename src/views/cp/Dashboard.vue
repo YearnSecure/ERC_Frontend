@@ -8,22 +8,15 @@
             :account="account"
             :chainId="chainId" />
 
-        <AlertModal 
+        <AlertModal
             v-if="showAlert"
             :alert="alert"
-            :showConnectionButton="showConnectionButton"
-            :showDownloadButton="showDownloadButton"
-            @connectAccount="connectAccount"
             @closeModal="closeModal" />
 
         <PageTitle 
             :title="title"
             :type="3" />
         
-<!--        <PreSales-->
-<!--            :presales="pinnedPresales"-->
-<!--            :options="options" />-->
-
         <PreSalesTable
             :presales="presales"
             @pinPresale="pinPresale"
@@ -40,9 +33,7 @@ import axios from 'axios'
 import AlertModal from '@/components/modals/Alert.modals'
 import Header from '@/components/Header'
 import PageTitle from '@/components/PageTitle'
-// import PreSales from '@/components/views/dashboard/presale/Presale.Dashboard'
 import PreSalesTable from '@/components/views/dashboard/presale/tables/Presale.Table'
-import Web3 from "web3";
 
 export default {
   name: 'dashboard.cp.views',
@@ -50,7 +41,6 @@ export default {
     AlertModal,
     Header,
     PageTitle,
-    // PreSales,
     PreSalesTable,
   },
   data() {
@@ -110,74 +100,7 @@ export default {
           this.$loading(false);
         });
     },
-    setPinnedPresales: async function () {
-      let pinnedPresales = localStorage.getItem('pinnedPresales');
-
-      if (!pinnedPresales) return;
-
-      pinnedPresales = JSON.parse(pinnedPresales);
-      this.pinnedPresales = [];
-      for (let i = 0; i < pinnedPresales.length; i++) {
-        const presale = this.presales.find(presale => presale.id === pinnedPresales[i].id);
-
-        if (presale) {
-          for (let i = 0; i < this.presales.length; i++) {
-            const presale = this.presales[i];
-            presale.chartData = {};
-            presale.chartData.datasets = [];
-            const dataset = {
-              data: [],
-              backgroundColor: [
-                '#db7d02',
-                '#f78c00',
-                '#f49d2c',
-                '#f2a541',
-                '#f9af4d',
-                '#f9b761',
-              ],
-            }
-            presale.chartData.datasets.push(dataset);
-            if (presale.tokens && presale.tokens.length > 0) {
-              for (let index = 0; index < presale.tokens.length; index++) {
-                const liquidity = presale.tokens[index].liquidity;
-                 presale.chartData.datasets[0].data.push(Number(liquidity));
-              }
-            }
-          }
-          this.pinnedPresales.push(presale);
-        }
-      }
-    },
-    pinPresale: async function (presale) {
-      const pinnedPresalesIds = localStorage.getItem('pinnedPresales');
-
-      if (pinnedPresalesIds === null) {
-        const presaleObject = {
-          id: presale.id
-        }
-
-        this.$store.state.pinnedPresales.push(presaleObject);
-        localStorage.setItem('pinnedPresales', JSON.stringify(this.$store.getters.pinnedPresales));
-      } else {
-        const pinnedPresales = this.$store.getters.pinnedPresales;
-
-        const presaleObject = {
-          id: presale.id
-        }
-
-        const pinnedPresale = pinnedPresales.find(p => p.id === presale.id);
-
-        if (pinnedPresale === undefined && pinnedPresales.length === 3) {
-          pinnedPresales.splice(0, 1);
-          pinnedPresales.push(presaleObject);
-        } else if (pinnedPresale === undefined) {
-          pinnedPresales.push(presaleObject);
-        }
-      }
-
-      await this.setPinnedPresales();
-    },
-    closeModal: function () { 
+    closeModal: function () {
       this.showAlert = !this.showAlert;
     },
     showError: function (
@@ -192,24 +115,6 @@ export default {
       this.showDownloadButton = showDownloadButton;
     }
   },
-  watch: {
-    provider: {
-      handler: function () {
-        if (
-          this.$store.getters.account === '' &&
-          this.provider._state.accounts.length > 0) {
-            this.$store.state.account = this.provider._state.accounts[0];
-            this.handleAccountsChanged(this.provider._state.accounts);
-          } else if (
-            this.$store.getters.account !== '' &&
-            this.provider._state.accounts.length === 0) {
-              this.$store.state.account = '';
-              this.handleAccountsChanged(this.provider._state.accounts);
-          }
-      },
-      deep: true
-    }
-  }
 }
 </script>
 

@@ -1,7 +1,7 @@
 <template>
-  <div id="yield" class="h-screen">
+  <div id="yield" :class="isLoaded ? 'h-full' : 'h-screen'">
     <transition name="slide-fade">
-      <main v-if="isLoaded" class="flex-1 relative z-0 overflow-y-auto focus:outline-none" tabindex="0">
+      <main class="flex-1 relative z-0 overflow-y-auto focus:outline-none" tabindex="0">
         <Header
             :contractAddress="contractAddress"
             :isConnected="isConnected"
@@ -13,7 +13,6 @@
             :alert="alert"
             :showConnectionButton="showConnectionButton"
             :showDownloadButton="showDownloadButton"
-            @connectAccount="connectAccount"
             @closeModal="closeModal" />
 
         <PageTitle 
@@ -22,15 +21,13 @@
 
         <YieldPool
             :yieldPool="yieldPool"
-            :chartData="chartData"
             :account="account"
             :showApproveButton="showApproveButton"
-            :yieldPoolAmount="yieldPoolAmount"
+            :accountBalance="accountBalance"
             @stake="stake"
             @unStake="unStake"
             @claim="claim"
-            @approve="approve"
-            :options="options" />
+            @approve="approve" />
       </main>
     </transition>
   </div>
@@ -43,6 +40,7 @@ import AlertModal from '@/components/modals/Alert.modals'
 import Header from '@/components/Header'
 import PageTitle from '@/components/PageTitle'
 import YieldPool from '@/components/views/yield/YieldPool.Yield'
+import WalletConnector from "@/plugins/walletConnect.plugin";
 
 export default {
   name: 'yield.cp.views',
@@ -62,7 +60,8 @@ export default {
       account: this.$store.state.account,
       provider: window.ethereum,
       chainId: null,
-      yieldPoolAmount: "",
+      web3: null,
+      accountBalance: "",
       yieldPool: {
         totalYsecStaked: 0,
         accountYsecStaked: 0,
@@ -78,41 +77,6 @@ export default {
         title: '',
         msg: ''
       },
-      chartData: {
-          labels: ['','','','','','','','','','','',''],
-          datasets: [
-            {
-              color: ['#db7d02'],
-              backgroundColor: ['rgba(245, 158, 11,0.5'],
-              data: [25, 35, 70, 90, 115, 200, 230, 350, 380, 460, 465, 470]
-            }
-          ],
-      },
-      options: {
-        responsive: true,
-        scales: {
-          yAxes: [{
-            display: false,
-
-            scaleLabel: {
-              display: false,
-              labelString: 'probability'
-            }
-          }],
-          xAxes: [{
-            display: false,
-            scaleLabel: {
-              display: false,
-              labelString: 'probability'
-            }
-          }],
-        },
-        legend: {
-          display: false,
-          position: 'left',
-        },
-        maintainAspectRatio: false
-      },
       contractAbi: [{"inputs":[{"internalType":"address","name":"tokenAddress","type":"address"},{"internalType":"address","name":"ysecPresaleAddress","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"reward","type":"uint256"}],"name":"RewardAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"forAddress","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"RewardClaimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"forAddress","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Staked","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"forAddress","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Unstaked","type":"event"},{"inputs":[],"name":"DepositCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"EndDate","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"EthAmount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"LastUpdateTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"RewardPerTokenStored","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"RewardRate","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"Stakers","outputs":[{"internalType":"uint256","name":"StakedAmount","type":"uint256"},{"internalType":"uint256","name":"Reward","type":"uint256"},{"internalType":"uint256","name":"UserRewardPerTokenPaid","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"StartDate","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"TotalClaimedEthAmount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"TotalStaked","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"TotalStakers","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"_ysecPresaleAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"_ysecTokenAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"periodDuration","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"stateMutability":"payable","type":"receive"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Stake","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"Unstake","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"ClaimReward","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"RewardPerToken","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"LastTimeRewardApplicable","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"Earned","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"forAddress","type":"address"}],"name":"GetStaker","outputs":[{"components":[{"internalType":"uint256","name":"StakedAmount","type":"uint256"},{"internalType":"uint256","name":"Reward","type":"uint256"},{"internalType":"uint256","name":"UserRewardPerTokenPaid","type":"uint256"}],"internalType":"struct Staker","name":"","type":"tuple"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"forAddress","type":"address"}],"name":"GetStakedAmount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}],
       tokenAbi: [{"constant":true,"inputs":[],"name":"name","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_value","type":"uint256"}],"name":"approve","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"totalSupply","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_from","type":"address"},{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"symbol","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"},{"name":"_spender","type":"address"}],"name":"allowance","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"payable":true,"stateMutability":"payable","type":"fallback"},{"anonymous":false,"inputs":[{"indexed":true,"name":"owner","type":"address"},{"indexed":true,"name":"spender","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Transfer","type":"event"}]
     }
@@ -120,48 +84,31 @@ export default {
   mounted: async function () {
     this.isLoaded = true;
     this.$loading(true);
-    if (this.$store.getters.account !== '') {
-      this.account = this.$store.getters.account;
-      this.chainId = this.provider.chainId;
-      this.isConnected = true;
-    }
 
-    if (this.account === '') {
-      // Detect provider
-      await this.detectProvider();
-      // Connect to your account
-      await this.currentAccount();
-    }
-
+    this.walletConnector = new WalletConnector(window.ethereum);
+    await this.initConnection();
     await this.initYieldFarm();
+
     this.$loading(false);
   },
   methods: {
+    initConnection: async function() {
+      // check connection
+      const isConnected = this.walletConnector.IsConnected();
+      if (isConnected) {
+        this.web3 = new Web3(this.provider);
+      } else {
+        this.web3 = this.walletConnector.GetProvider();
+      }
+      this.contractInterface = new this.web3.eth.Contract(this.contractAbi);
+      this.contractInterface.options.address = process.env.VUE_APP_PRESALE_CONTRACT_ETH;
+
+      await this.loadAccounts();
+    },
     initYieldFarm: async function() {
       await this.getContractData();
       await this.tokenAllowance();
-      await this.getYieldAmount();
-    },
-    detectProvider: async function() {
-      if (!this.provider.isMetaMask)
-        return this.showError(
-          'MetaMask is not installed.', 
-          'It looks like the connection to the MetaMask wallet failed. Try connecting again.');
-    },
-    currentAccount: async function () {
-      // connect to MetaMask account
-      this.chainId = this.provider.chainId;
-      this.provider
-        .request({ method: 'eth_accounts' })
-        .then(this.handleAccountsChanged(this.provider._state.accounts))
-        .catch((err) => {
-          // Some unexpected error.
-          // For backwards compatibility reasons, if no accounts are available,
-          // eth_accounts will return an empty array.
-          this.showError(
-            'Unexpected error',
-            err);
-        });
+      await this.getAccountBalance();
     },
     getContractData: async function () {
       const contractAbi = this.contractAbi;
@@ -183,155 +130,133 @@ export default {
       await this.getParticipants(contractInterface);
     },
     tokenAllowance: async function() {
-      const tokenAbi = this.tokenAbi;
-      const web3 = new Web3(this.provider);
-      const tokenInterface = new web3.eth.Contract(tokenAbi);
-      tokenInterface.options.address = process.env.VUE_APP_CONTRACT_ADDRESS_ETH;
-
-      await tokenInterface.methods.allowance(this.account, process.env.VUE_APP_YIELD_CONTRACT_ETH)
-        .call()
+      await this.walletConnector.getAllowance(this.account, process.env.VUE_APP_YIELD_CONTRACT_ETH, process.env.VUE_APP_CONTRACT_ADDRESS_ETH, this.tokenAbi)
         .then((response) => {
           if (response > 500000000000000000000000) {
             this.showApproveButton = false;
             this.$store.state.yieldAllowance = true;
           }
+        }).catch((e) => {
+          console.log(`Error get token allowance: ${e.message}}`);
         });
     },
-    getYieldAmount: async function() {
-      const tokenAbi = this.tokenAbi;
-      const web3 = new Web3(this.provider);
-      const tokenInterface = new web3.eth.Contract(tokenAbi);
-      tokenInterface.options.address = process.env.VUE_APP_CONTRACT_ADDRESS_ETH;
-
-      await tokenInterface.methods.balanceOf(this.account)
-        .call()
+    getAccountBalance: async function() {
+      await this.walletConnector.getAccountBalance(this.account, process.env.VUE_APP_CONTRACT_ADDRESS_ETH, this.tokenAbi)
         .then((response) => {
-          this.yieldPoolAmount = parseFloat(web3.utils.fromWei(response)).toFixed(5);
+          if (response > "500000000000000000000000") {
+            this.accountBalance = parseFloat(this.web3.utils.fromWei(response)).toFixed(5);
+          }
+        }).catch((e) => {
+          console.log(`Error get yield pool amount: ${e.message}}`);
         });
     },
     approve: async function() {
       this.$loading(true);
-      const tokenAbi = this.tokenAbi;
-      const web3 = new Web3(this.provider);
-      const tokenInterface = new web3.eth.Contract(tokenAbi);
-      tokenInterface.options.address = process.env.VUE_APP_CONTRACT_ADDRESS_ETH;
 
-      await tokenInterface.methods.approve(process.env.VUE_APP_YIELD_CONTRACT_ETH, "115792089237316195423570985008687907853269984665640564039457584007913129639935")
-        .send({from: this.account})
+      await this.walletConnector.approveCall(
+        this.account,
+        process.env.VUE_APP_YIELD_CONTRACT_ETH,
+        1000000, // YSEC Total supply
+        process.env.VUE_APP_CONTRACT_ADDRESS_ETH,
+        this.tokenAbi)
         .then((response) => {
           if (response.status) {
             this.$notifications(
-              'Approved success',
-              ``,
-              0, // success
-              true);
+                'Approved success',
+                ``,
+                0, // success
+                true);
 
             this.showApproveButton = false;
             this.$store.state.yieldAllowance = true;
-
-            this.$loading(false);
           }
-        })
-        .catch((e) => {
+        }).catch((e) => {
+          console.log(`Error approve wallet: ${e.message}}`);
           this.$notifications(
-              'Something went wrong staking',
-              e,
-              1, // error
-              true);
-
+            'Something went wrong approving wallet',
+            e,
+            1, // error
+            true);
+        }).finally(() => {
           this.$loading(false);
         });
     },
     stake: async function(amount) {
-      const contractAbi = this.contractAbi;
-      const web3 = new Web3(this.provider);
-      const presaleContractInterface = new web3.eth.Contract(contractAbi);
-      presaleContractInterface.options.address = process.env.VUE_APP_YIELD_CONTRACT_ETH;
-
       this.$loading(true);
-      await presaleContractInterface.methods.Stake(web3.utils.toWei(amount))
-          .send({from: this.account})
-          .then((response) => {
-            if (response.status) {
-              this.$loading(false);
-              this.$notifications(
-                  'Staked successfully',
-                  ``,
-                  0, // success
-                  true);
 
-              this.initYieldFarm();
-            }
-          })
-          .catch((e) => {
-            this.$notifications(
-                'Something went wrong staking',
-                e,
-                1, // error
-                true);
+      await this.walletConnector.stakeTokens(
+        this.account,
+        amount,
+        process.env.VUE_APP_YIELD_CONTRACT_ETH,
+        this.contractAbi)
+      .then(() => {
+        this.$notifications(
+        'Staked successfully',
+        ``,
+        0, // success
+        true);
 
-            this.$loading(false);
-          });
+        this.initYieldFarm();
+      }).catch((e) => {
+        console.log(`Error staking tokens: ${e.message}}`);
+        this.$notifications(
+        'Something went wrong staking',
+        e,
+        1, // error
+        true);
+      }).finally(() => {
+        this.$loading(false);
+      });
     },
     unStake: async function() {
-      const contractAbi = this.contractAbi;
-      const web3 = new Web3(this.provider);
-      const presaleContractInterface = new web3.eth.Contract(contractAbi);
-      presaleContractInterface.options.address = process.env.VUE_APP_YIELD_CONTRACT_ETH;
-
       this.$loading(true);
-      await presaleContractInterface.methods.Unstake()
-          .send({from: this.account})
-          .then((response) => {
-            if (response.status) {
-              this.$loading(false);
-              this.$notifications(
+
+      await this.walletConnector.unstakeTokens(
+          this.account,
+          process.env.VUE_APP_YIELD_CONTRACT_ETH,
+          this.contractAbi)
+          .then(() => {
+            this.$notifications(
                 'Unstaked successfully',
                 ``,
                 0, // success
                 true);
 
-              this.initYieldFarm();
-            }
-          })
-          .catch((e) => {
+            this.initYieldFarm();
+          }).catch((e) => {
+            console.log(`Error staking tokens: ${e.message}}`);
             this.$notifications(
-              'Something went wrong unstaking',
-              e,
-              1, // error
-              true);
-
+                'Something went wrong unstaking',
+                e,
+                1, // error
+                true);
+          }).finally(() => {
             this.$loading(false);
           });
     },
     claim: async function() {
-      const contractAbi = this.contractAbi;
-      const web3 = new Web3(this.provider);
-      const presaleContractInterface = new web3.eth.Contract(contractAbi);
-      presaleContractInterface.options.address = process.env.VUE_APP_YIELD_CONTRACT_ETH;
-
       this.$loading(true);
-      await presaleContractInterface.methods.ClaimReward()
-          .send({from: this.account})
-          .then((response) => {
-            if (response.status) {
-              this.$loading(false);
-              this.$notifications(
+
+      await this.walletConnector.claimReward(
+          this.account,
+          process.env.VUE_APP_YIELD_CONTRACT_ETH,
+          this.contractAbi)
+          .then(() => {
+            this.$notifications(
                 'Reward claimed successfully',
                 ``,
                 0, // success
                 true);
 
-              this.initYieldFarm();
-            }
-          })
-          .catch((e) => {
+            this.initYieldFarm();
+          }).catch((e) => {
+            console.log(`Error staking tokens: ${e.message}}`);
             this.$notifications(
-              'Something went wrong claiming rewards',
-              e,
-              1, // error
-              true);
-
+                'Something went wrong claiming your reward',
+                e,
+                1, // error
+                true);
+          }).finally(() => {
             this.$loading(false);
           });
     },
@@ -353,9 +278,10 @@ export default {
 
       await web3.eth.getBalance(process.env.VUE_APP_YIELD_CONTRACT_ETH, function (err, result) {
         if (err) {
-          this.showError(
-              'Something went wrong',
-              'Reading balance',
+          this.$notifications(
+              'Something went wrong reading balance',
+              err,
+              1, // error
               true);
         } else {
           ethInPool = parseFloat(web3.utils.fromWei(result)).toFixed(5);
@@ -370,33 +296,14 @@ export default {
     getParticipants: async function(contractInterface) {
       this.yieldPool.participants = await contractInterface.methods.TotalStakers().call();
     },
-    handleAccountsChanged: function(accounts) {
-      if (accounts.length === 0) {
-        // MetaMask is locked or the user has not connected any accounts
-        this.isConnected = false;
-        this.showError(
-          'No connections made',
-          'Click the connect button to connect your MetaMask account',
-          true);
-      } else if (accounts[0] !== this.account) {
-        this.account = accounts[0];
-        // show user that MetaMask is connected
+    loadAccounts: async function() {
+      const wallet = await this.walletConnector.GetAccounts();
+      if (wallet !== undefined) {
+        this.account = wallet[0];
+        this.$store.state.account = wallet[0];
+        this.chainId = await this.walletConnector.GetChainId();
         this.isConnected = true;
       }
-    },
-    connectAccount: function () {
-      this.provider
-        .request({ method: 'eth_requestAccounts' })
-        .then(this.handleAccountsChanged(this.provider._state.accounts))
-        .catch((err) => {
-          if (err.code === 4001) {
-            // EIP-1193 userRejectedRequest error
-            // If this happens, the user rejected the connection request.
-            this.showError('Please connect to MetaMask.', err.message);
-          } else {
-            this.showError('Something went wrong', err.message);
-          }
-        });
     },
     closeModal: function () { 
       this.showAlert = !this.showAlert;

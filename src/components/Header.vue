@@ -87,6 +87,11 @@
         :chainId="chainId"
         @disconnectWallet="disconnectWallet"
         @toggleModal="toggleConnectedWalletModal"/>
+
+    <AlertModal
+        v-if="showAlert"
+        :alert="alert"
+        @closeModal="toggleAlertModal" />
   </div>  
 </template>
 
@@ -96,6 +101,7 @@ import { mapGetters } from "vuex";
 import InitConnectWalletModal from "@/components/modals/InitWalletConnection";
 import ConnectedWalletModal from "@/components/modals/ConnectedWallet";
 import WalletConnector from "@/plugins/walletConnect.plugin";
+import AlertModal from '@/components/modals/Alert.modals'
 
 export default {
   name: 'header.dashboard.components',
@@ -105,7 +111,8 @@ export default {
   },
   components: {
     InitConnectWalletModal,
-    ConnectedWalletModal
+    ConnectedWalletModal,
+    AlertModal
   },
   data:() => ({
     switchPlatformUrl: process.env.VUE_APP_BSC,
@@ -115,7 +122,12 @@ export default {
     walletConnector: null,
     isConnected: false,
     chainId: null,
+    alert: {
+      title: '',
+      msg: ''
+    },
     showModal: false,
+    showAlert: false,
     showConnectedWalletModal: false,
   }),
   beforeMount: function(){
@@ -124,6 +136,30 @@ export default {
   mounted: async function() {
     this.walletConnector = new WalletConnector(window.ethereum);
     await this.initConnection();
+
+    if (this.chainId !== process.env.VUE_APP_NETWORK_ID) {
+      let rightNetwork = '';
+      switch (process.env.VUE_APP_NETWORK_ID) {
+        case '0x1':
+          rightNetwork = 'ETH Main network'
+          break;
+        case '0x3':
+          rightNetwork = 'ETH Ropsten network'
+          break;
+        case '0x38':
+          rightNetwork = 'BSC Main network'
+          break;
+        case '0x61':
+          rightNetwork = 'BSC Test network'
+          break;
+      }
+
+      this.alert = {
+        title: "You're connected to the wrong network",
+        msg: `Please switch from ${this.network} to the ${rightNetwork}.`
+      }
+      this.toggleAlertModal();
+    }
   },
   computed: {
     ...mapGetters({ theme: "getTheme" }),
@@ -132,6 +168,9 @@ export default {
       switch (this.chainId) {
         case '0x1':
           network = 'ETH Main network'
+          break;
+        case '0x3':
+          network = 'ETH Ropsten network'
           break;
         case '0x38':
           network = 'BSC Main network'
@@ -219,6 +258,9 @@ export default {
     setTheme: function() {
       this.$store.dispatch("toggleTheme");
     },
+    toggleAlertModal: function () {
+      this.showAlert = !this.showAlert;
+    }
   },
 }
 </script>

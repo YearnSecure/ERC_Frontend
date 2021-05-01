@@ -78,7 +78,7 @@
     </div>
     <div class="block px-4 mt-6 sm:px-6 lg:px-8" v-if="!showApproveButton">
       <div class="block">
-        <p class="text-gray-700 dark:text-white">Your balance: {{yieldPoolAmount}} YSEC</p>
+        <p class="text-gray-700 dark:text-white">Your balance: {{accountBalance}} YSEC</p>
         <div class="grid grid-cols-4">
           <div class="grid col-span-3">
             <input
@@ -150,11 +150,9 @@ export default {
   name: 'Yield.views.components',
   props: {
     yieldPool: Object,
-    chartData: Object,
-    options: Object,
     account: String,
     showApproveButton: Boolean,
-    yieldPoolAmount: String,
+    accountBalance: String,
   },
   data: () => ({
     amount: "",

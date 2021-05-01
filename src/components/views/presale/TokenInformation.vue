@@ -30,7 +30,7 @@
         <div class="grid gap-1 mt-1">
           <div class="flex">
             <span class="text-gray-900 dark:text-white pr-5">Price per token:</span>
-            <p class="text-blue-500">{{ presale.TokenPrice }} ETH</p>
+            <p class="text-blue-500">{{ presale.TokenPrice.toFixed(10) }} ETH</p>
           </div>
         </div>
         <div class="grid gap-1 mt-1">
