@@ -12,7 +12,6 @@
             :alert="alert"
             :showConnectionButton="showConnectionButton"
             :showDownloadButton="showDownloadButton"
-            @connectAccount="connectAccount"
             @closeModal="closeModal" />
 
         <PageTitle
@@ -190,6 +189,8 @@ export default {
         },
         maintainAspectRatio: false
       },
+      showConnectionButton: false,
+      showDownloadButton: false,
       progressStyle: 'width: 0%',
       progressPercentage: "0",
       web3: null,
@@ -217,13 +218,11 @@ export default {
       const isConnected = this.walletConnector.IsConnected();
       if (isConnected) {
         this.web3 = new Web3(this.provider);
-        this.contractInterface = new this.web3.eth.Contract(this.contractAbi);
-        this.contractInterface.options.address = process.env.VUE_APP_PRESALE_CONTRACT_ETH;
       } else {
         this.web3 = this.walletConnector.GetProvider();
-        this.contractInterface = new this.web3.eth.Contract(this.contractAbi);
-        this.contractInterface.options.address = process.env.VUE_APP_PRESALE_CONTRACT_ETH;
       }
+      this.contractInterface = new this.web3.eth.Contract(this.contractAbi);
+      this.contractInterface.options.address = process.env.VUE_APP_PRESALE_CONTRACT_ETH;
 
       await this.loadAccounts();
     },
@@ -289,7 +288,7 @@ export default {
 
       const hardCapPercentage = Number(this.web3.utils.fromWei(response.Hardcap)) * 0.95;
       const toLiquidity = hardCapPercentage * ((1/100) * Number(response.LiqPercentage));
-      this.presale.listingTokenPrice = (toLiquidity / Number(this.web3.utils.fromWei(response.TokenLiqAmount))).toFixed(5);
+      this.presale.listingTokenPrice = (toLiquidity / Number(this.web3.utils.fromWei(response.TokenLiqAmount))).toFixed(10);
 
       //Current Presale Step
       this.presale.CurrentStep = response.State.Step;
@@ -322,23 +321,29 @@ export default {
       this.presale.chartData.datasets[0].data.push(liquidityPercentage);
     },
     getContributedEth: async function() {
-      const response = await this.walletConnector.getContributedEth(this.id, this.account, process.env.VUE_APP_PRESALE_CONTRACT_ETH, this.contractAbi);
-
-      if (parseInt(response) === 0){
-        this.presale.UserContribution = 0;
-        this.presale.Roi = 0;
-      } else {
-        this.presale.UserContribution = this.web3.utils.fromWei(response);
-        await this.getRoi();
-      }
+      await this.walletConnector.getContributedEth(this.id, this.account, process.env.VUE_APP_PRESALE_CONTRACT_ETH, this.contractAbi)
+        .then((response) => {
+          if (parseInt(response) === 0){
+            this.presale.UserContribution = 0;
+            this.presale.Roi = 0;
+          } else {
+            this.presale.UserContribution = this.web3.utils.fromWei(response);
+            this.getRoi();
+          }
+        }).catch((e) => {
+          console.log(`Error get roi: ${e.message}}`);
+        });
     },
     getTokenTicker: async function() {
       this.presale.TokenName = await this.walletConnector.getTokenTicker(this.presale.TokenAddress, this.tokenAbi);
     },
     getRoi: async function() {
-      const response = await this.walletConnector.getRoi(this.id, this.account, process.env.VUE_APP_PRESALE_CONTRACT_ETH, this.contractAbi);
-
-      this.presale.Roi = this.web3.utils.fromWei(response);
+      await this.walletConnector.getRoi(this.id, this.account, process.env.VUE_APP_PRESALE_CONTRACT_ETH, this.contractAbi)
+        .then((response) => {
+          this.presale.Roi = this.web3.utils.fromWei(response);
+        }).catch((e) => {
+          console.log(`Error get roi: ${e.message}}`);
+        });
     },
     getTokenPrice: function() {
       return parseInt(this.presale.Hardcap)/(parseInt(this.presale.RawTokensInPresale));
@@ -535,6 +540,9 @@ export default {
     },
     formatFromWei: function(wei) {
       return this.web3.utils.fromWei(wei.toString());
+    },
+    closeModal: function() {
+      this.showAlert = false;
     },
     showError: function (
         title,

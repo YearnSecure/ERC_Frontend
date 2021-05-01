@@ -1,5 +1,5 @@
 <template>
-    <div id="presale">
+    <div id="presale" :class="isInitialized ? 'h-full' : 'h-screen'">
       <transition name="slide-fade">
         <main v-if="isLoaded" class="flex-1 relative z-0 overflow-y-auto focus:outline-none" tabindex="0">
           <Header
@@ -117,6 +117,7 @@ import Tokenomics from '@/components/presale/Tokenomics'
 import Socials from '@/components/presale/Socials'
 import NotCompleted from '@/components/presale/NotCompleted'
 import Web3 from "web3";
+import WalletConnector from "@/plugins/walletConnect.plugin";
 
 export default {
   name: 'presale.cp.views',
@@ -136,6 +137,7 @@ export default {
       isConnected: false,
       showAlert: false,
       isLoaded: false,
+      isInitialized: false,
       title: 'Presale',
       account: this.$store.state.account,
       provider: window.ethereum,
@@ -252,20 +254,28 @@ export default {
   },
   mounted: async function () {
     this.$loading(true);
-    if (this.provider === undefined) {
-      this.isLoaded = true;
-    }
 
-    if (!this.isLoaded) {
-      // Detect provider
-      await this.detectProvider();
-      // Connect to your account
-      await this.currentAccount();
-      this.isLoaded = true;
-    }
+    this.walletConnector = new WalletConnector(window.ethereum);
+    this.isInitialized = true;
+    await this.initConnection();
+
+    this.isLoaded = true;
     this.$loading(false);
   },
   methods: {
+    initConnection: async function() {
+      // check connection
+      const isConnected = this.walletConnector.IsConnected();
+      if (isConnected) {
+        this.web3 = new Web3(this.provider);
+      } else {
+        this.web3 = this.walletConnector.GetProvider();
+      }
+      this.contractInterface = new this.web3.eth.Contract(this.contractAbi);
+      this.contractInterface.options.address = process.env.VUE_APP_PRESALE_CONTRACT_ETH;
+
+      await this.loadAccounts();
+    },
     validSocials: function() {
       this.presaleIsValid = true;
     },
@@ -473,53 +483,12 @@ export default {
           this.$loading(false);
         });
     },
-    detectProvider: async function () {
-      // Great change MetaMask is not installed
-      if (this.provider === undefined) {
-        return this.showError(
-            'unexpected error',
-            'It looks like the connection to the MetaMask wallet failed. Try connecting again.',
-            false,
-            true);
-      }
-
-      if (!this.provider.isMetaMask)
-        this.$notifications(
-            'METAMASK not connected',
-            'Please connect your METAMASK',
-            1, // error
-            true);
-    },
-    currentAccount: async function () {
-      // connect to MetaMask account
-      this.chainId = this.provider.chainId;
-      this.provider
-          .request({ method: 'eth_accounts' })
-          .then(this.handleAccountsChanged(this.provider._state.accounts))
-          .catch(() => {
-            // Some unexpected error.
-            // For backwards compatibility reasons, if no accounts are available,
-            // eth_accounts will return an empty array.
-            this.$notifications(
-                'METAMASK not connected',
-                'Please connect your METAMASK',
-                1, // error
-                true);
-          });
-    },
-    handleAccountsChanged: function (accounts) {
-      if (accounts !== null && accounts.length === 0) {
-        // MetaMask is locked or the user has not connected any accounts
-        this.isConnected = false;
-        this.$notifications(
-            'No connections made\'',
-            'Click the connect button to connect your MetaMask account',
-            1, // error
-            true);
-      } else {
-        this.$store.state.account = accounts[0];
-        this.account = accounts[0];
-        // show user that MetaMask is connected
+    loadAccounts: async function() {
+      const wallet = await this.walletConnector.GetAccounts();
+      if (wallet !== undefined) {
+        this.account = wallet[0];
+        this.$store.state.account = wallet[0];
+        this.chainId = await this.walletConnector.GetChainId();
         this.isConnected = true;
       }
     },
