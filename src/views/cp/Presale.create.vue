@@ -243,6 +243,15 @@ export default {
     this.isInitialized = true;
     await this.initConnection();
 
+    if (!this.isConnected) {
+      this.$notifications(
+          "Please connect your wallet",
+          "This page only works when you connect your wallet",
+          1, // error
+          true
+      );
+    }
+
     this.isLoaded = true;
     this.$loading(false);
   },
