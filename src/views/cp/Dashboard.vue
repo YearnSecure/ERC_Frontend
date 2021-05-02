@@ -93,7 +93,7 @@ export default {
             this.presales = response.data.items;
           }
         }).catch(() => {
-          this.showError('Error');
+          this.showError('Error', 'Something went wrong getting presale data');
         }).finally(() => {
           this.$loading(false);
         });
