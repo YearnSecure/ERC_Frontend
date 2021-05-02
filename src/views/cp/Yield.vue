@@ -66,7 +66,7 @@ export default {
         totalYsecStaked: 0,
         accountYsecStaked: 0,
         rewards: 0,
-        ETHPool: null,
+        ETHPool: 0,
         preSales: 0,
         participants: 0
       },
@@ -87,7 +87,17 @@ export default {
 
     this.walletConnector = new WalletConnector(window.ethereum);
     await this.initConnection();
-    await this.initYieldFarm();
+
+    if (this.isConnected) {
+      await this.initYieldFarm();
+    } else {
+      this.$notifications(
+          "Please connect your wallet",
+          "The yield pool only works when you connect your wallet",
+          1, // error
+          true
+      );
+    }
 
     this.$loading(false);
   },
